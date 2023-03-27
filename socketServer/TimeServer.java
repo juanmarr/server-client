@@ -1,12 +1,19 @@
 package socketServer;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TimeServer {
 
@@ -24,7 +31,6 @@ public class TimeServer {
                 System.out.println("Accepted connection from client " + socket.getInetAddress());
                 Thread thread = new Thread(new ClientHandler(socket));
                 thread.start();
-
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -33,9 +39,10 @@ public class TimeServer {
 
     static class ClientHandler implements Runnable {
         private Socket socket;
-
+        private static List<String> connectedClients = new CopyOnWriteArrayList<>();
         public ClientHandler(Socket socket) {
             this.socket = socket;
+            connectedClients.add(socket.getInetAddress().toString());
         }
 
         @Override
@@ -49,46 +56,33 @@ public class TimeServer {
                 while ((input = in.readLine()) != null) {
                     switch (input) {
                         case "1":
-                            // Code to create and process client requests goes here
                             out.println(new Date().toString());
-
                             break;
                         case "2":
-                            // Code to create and process client requests goes here
                             RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
                             long uptimeInMillis = runtimeBean.getUptime();
                             String uptimeString = "Uptime: " + uptimeInMillis + " milliseconds";
                             out.println(uptimeString);
                             break;
                         case "3":
-                            // Code to create and process client requests goes here
                             MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
                             MemoryUsage heapMemoryUsage = memoryBean.getHeapMemoryUsage();
                             long usedHeapMemory = heapMemoryUsage.getUsed();
-                            System.out.println("Used heap memory: " + usedHeapMemory + " bytes");
+                            out.println("Used heap memory: " + usedHeapMemory + " bytes");
                             break;
-                        case "4": //get enumerations of server addresses
-                            try {
-                                Process process = Runtime.getRuntime().exec("netstat");
-                                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    System.out.println(line);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                        case "4":
+                            System.out.println("Executing Netstat - lists network connections on the server"); // Print the description
+                            Process process = Runtime.getRuntime().exec("netstat");
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                out.println(line);
                             }
                             break;
-                        case "5": //print Current Users - list of users currently connected to the server
-                            try {
-                                Process process = Runtime.getRuntime().exec("who");
-                                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    out.println(line);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                        case "5":
+                            out.println("Current Users - list of users currently connected to the server:");
+                            for (String client : connectedClients) {
+                                out.println(client);
                             }
                             break;
                         case "6":
@@ -101,7 +95,6 @@ public class TimeServer {
                             break;
                         case "7":
                             socket.close();
-
                             return;
                         default:
                             out.println("Invalid input");
